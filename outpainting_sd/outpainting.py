@@ -20,12 +20,9 @@ def shrink_and_paste_on_blank(current_image:Image.Image, mask_width:int=64):
     return Image.fromarray(blank_image)
 
 
-def outpaint_sd(image, version_1 = True):
+def outpaint_sd_overall(image, model_path):
     image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-
-    model_link = f"/home/compu/Downloads/StableDiffusion_Outpainting/stable-diffusion{'' if version_1 else '-2'}-inpainting"
-    #pipe = StableDiffusionInpaintPipeline.from_pretrained(model_link, variant="fp16", torch_dtype=torch.float16, low_cpu_mem_usage=False)
-    pipe =  StableDiffusionInpaintPipeline.from_pretrained(model_link)
+    pipe =  StableDiffusionInpaintPipeline.from_pretrained(model_path)
     pipe.to("cuda")
     interrogator = interrogators['wd14-convnextv2.v1']
     
