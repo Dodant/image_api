@@ -39,18 +39,18 @@ warnings.filterwarnings('ignore')
 def log_image_info(file_data):
     try:
         image = Image.open(BytesIO(file_data))
-        app.logger.info(f"Image format: {image.format}")
-        app.logger.info(f"Image size: {image.size}")
-        app.logger.info(f"Image mode: {image.mode}")
+        app.logger.info(f'Image format: {image.format}')
+        app.logger.info(f'Image size: {image.size}')
+        app.logger.info(f'Image mode: {image.mode}')
     except Exception as e:
-        app.logger.error(f"Error reading image data: {str(e)}")
+        app.logger.error(f'Error reading image data: {str(e)}')
         
 @app.before_request
 def log_request_info():
     request.id = uuid.uuid4()
     request.start_time = time.time()
-    app.logger.info(f"Request ID: {request.id} - {request.method} {request.url}")
-    app.logger.info(f"Headers: {request.headers}")
+    app.logger.info(f'Request ID: {request.id} - {request.method} {request.url}')
+    app.logger.info(f'Headers: {request.headers}')
     
     if 'image' in request.files:
         image_file = request.files['image']
@@ -58,19 +58,19 @@ def log_request_info():
         log_image_info(file_data)
         image_file.seek(0)
     else:
-        app.logger.info(f"Body: {request.get_data()}")
+        app.logger.info(f'Body: {request.get_data()}')
 
 @app.after_request
 def log_response_info(response):
     duration = time.time() - request.start_time
-    app.logger.info(f"Request ID: {request.id} - Duration: {duration:.3f}s")
-    app.logger.info(f"Response: {response.status}")
+    app.logger.info(f'Request ID: {request.id} - Duration: {duration:.3f}s')
+    app.logger.info(f'Response: {response.status}')
     return response
 
 @app.errorhandler(Exception)
 def handle_exception(e):
-    app.logger.error(f"Exception: {str(e)}", exc_info=True)
-    return "An error occurred", 500
+    app.logger.error(f'Exception: {str(e)}', exc_info=True)
+    return 'An error occurred', 500
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
@@ -144,7 +144,7 @@ def process_image():
         if method == 'retarget':
             pass
 
-        if method == "roi_crop":
+        if method == 'roi_crop':
             pass
         print('size', processed_image.shape)
         _, buffer = cv2.imencode('.jpg', processed_image)

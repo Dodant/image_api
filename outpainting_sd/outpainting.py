@@ -11,9 +11,9 @@ def shrink_and_paste_on_blank(current_image:Image.Image, mask_width:int=64):
     height, width = current_image.height, current_image.width
 
     prev_image = current_image.resize((height-2*mask_width, width-2*mask_width))
-    prev_image = np.array(prev_image.convert("RGBA"))
+    prev_image = np.array(prev_image.convert('RGBA'))
 
-    blank_image = np.array(current_image.convert("RGBA")) * 0
+    blank_image = np.array(current_image.convert('RGBA')) * 0
     blank_image[:, :, 3] = 1
     blank_image[mask_width:height-mask_width, mask_width:width-mask_width, :] = prev_image
 
@@ -21,20 +21,21 @@ def shrink_and_paste_on_blank(current_image:Image.Image, mask_width:int=64):
 
 
 def outpaint_sd_overall(image, model_path):
-    image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+    image_original = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
     pipe =  StableDiffusionInpaintPipeline.from_pretrained(model_path)
-    pipe.to("cuda:3")
+    pipe.to('cuda:3')
     interrogator = interrogators['wd14-convnextv2.v1']
     
     new_size = (512, 512)
-    image = shrink_and_paste_on_blank([image.resize(new_size)][0])
+    image = shrink_and_paste_on_blank([image_original.resize(new_size)][0])
 
     mask_image = np.array(image)[:, :, 3]
-    mask_image = Image.fromarray(255 - mask_image).convert("RGB")
-    image = image.convert("RGB")
+    mask_image = Image.fromarray(255 - mask_image).convert('RGB')
+    image = image.convert('RGB')
 
-    result = interrogator.interrogate(image)
+    result = interrogator.interrogate(image_original)
     tags = Interrogator.postprocess_tags(result[1], threshold=0.5, escape_tag=True, replace_underscore=True)
+    for i in tags: print(f'{i} : {tags[i]}')
     output_image = pipe(prompt=', '.join(tags.keys()), image=image, mask_image=mask_image, num_inference_steps=20).images[0]
     output_image = np.array(output_image)
 

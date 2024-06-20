@@ -1,6 +1,7 @@
 import skimage
 import numpy as np
 import tensorflow as tf
+from skimage import transform
 from scipy.ndimage.morphology import distance_transform_edt
 
 input_size = 128
@@ -16,7 +17,7 @@ def load_tflite_model(model_path):
     return interpreter
 
 def resize_masking(input_img, size):
-    resized = skimage.transform.resize(input_img, size, anti_aliasing=True)
+    resized = transform.resize(input_img, size, anti_aliasing=True)
     masked_img = np.ones((output_size, output_size, 3))
     masked_img[expand_size:-expand_size, expand_size:-expand_size, :] = resized
     assert(masked_img.shape[0] == output_size)
@@ -58,17 +59,17 @@ def blend(output_img, input_img, blend_width=8):
     if input_img.shape[1] < in_factor * output_img.shape[1]:
         out_width, out_height = output_img.shape[1], output_img.shape[0]
         in_width, in_height = int(out_width * in_factor), int(out_height * in_factor)
-        input_img = skimage.transform.resize(input_img, (in_height, in_width), anti_aliasing=True)
+        input_img = transform.resize(input_img, (in_height, in_width), anti_aliasing=True)
     else:
         in_width, in_height = input_img.shape[1], input_img.shape[0]
         out_width, out_height = int(in_width / in_factor), int(in_height / in_factor)
-        output_img = skimage.transform.resize(output_img, (out_height, out_width), anti_aliasing=True)
+        output_img = transform.resize(output_img, (out_height, out_width), anti_aliasing=True)
 
     src_mask = np.zeros((output_size, output_size))
     src_mask[expand_size+1:-expand_size-1, expand_size+1:-expand_size-1] = 1 # 1 extra pixel for safety
     src_mask = distance_transform_edt(src_mask) / blend_width
     src_mask = np.minimum(src_mask, 1)
-    src_mask = skimage.transform.resize(src_mask, (out_height, out_width), anti_aliasing=True)
+    src_mask = transform.resize(src_mask, (out_height, out_width), anti_aliasing=True)
     src_mask = np.tile(src_mask[:, :, np.newaxis], (1, 1, 3))
     
     input_pad = np.zeros((out_height, out_width, 3))
