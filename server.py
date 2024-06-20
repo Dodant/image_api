@@ -11,12 +11,14 @@ from PIL import Image
 from flask import Flask, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 from logging.handlers import RotatingFileHandler
+import torch
 import cv2
 
 import config
 from outpainting_gan.outpainting import *
 from outpainting_sd.outpainting import outpaint_sd_overall
 from super_res.sr import sr_overall
+from sod.dfi import build_model
 
 os.makedirs(config.tempdir, exist_ok=True)
 tempfile.tempdir = config.tempdir
@@ -91,6 +93,28 @@ def outpaint_image_gan(image, model_path, input_size=128):
     _, processed_image = outpaint(output_image, image)
     return (processed_image * 255).astype('uint8')
 
+def salient_crop(image_original, model_path):
+    model = build_model()
+    model.load_state_dict(torch.load(model_path))
+    model.eval()
+
+    in_ = np.array(image_original, dtype=np.float32) 
+    in_ -= np.array((104.00699, 116.66877, 122.67892))
+    image, _ = in_.transpose((2,0,1)), tuple(in_.shape[:2])
+    image = torch.Tensor(image).unsqueeze(0)
+    
+    with torch.no_grad():
+        preds = model(image, mode=3)
+        pred_sal = np.squeeze(torch.sigmoid(preds[1][0]).cpu().data.numpy())
+        pred_sal = 255 * pred_sal
+        pred_sal = np.where(pred_sal > 126, 255, 0).astype(np.uint8)
+
+        contours, _ = cv2.findContours(pred_sal, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        bounding_boxes = [cv2.boundingRect(contour) for contour in contours]
+
+        for _, (x, y, w, h) in enumerate(bounding_boxes):
+            return image_original[y:y+h, x:x+w] 
+        
 
 @app.route('/process_image', methods=['POST'])
 def process_image():
@@ -107,7 +131,7 @@ def process_image():
         file.save(filepath)
         
         method = request.form['method']
-        if method not in ['gan', 'sd1', 'sd2', 'sr1', 'sr2', 'crop', 'blur', 'retarget']:
+        if method not in ['gan', 'sd1', 'sd2', 'sr1', 'sr2', 'sod', 'crop', 'blur', 'retarget']:
             return jsonify(error='Invalid method'), 400
 
         image = cv2.imread(filepath)
@@ -130,6 +154,10 @@ def process_image():
         if method == 'sr2':
             model_path = config.sr2_model
             processed_image = sr_overall(image, model_path, 512, False)
+        
+        if method == 'sod':
+            model_path = config.sod_model
+            processed_image = salient_crop(image, model_path)
         
         if method == 'crop':
             x, y = int(request.form.get('x', 0)), int(request.form.get('y', 0))
