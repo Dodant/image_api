@@ -23,7 +23,7 @@ def shrink_and_paste_on_blank(current_image:Image.Image, mask_width:int=64):
 def outpaint_sd_overall(image, model_path):
     image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
     pipe =  StableDiffusionInpaintPipeline.from_pretrained(model_path)
-    pipe.to("cuda")
+    pipe.to("cuda:3")
     interrogator = interrogators['wd14-convnextv2.v1']
     
     new_size = (512, 512)

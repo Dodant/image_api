@@ -146,7 +146,7 @@ def process_image():
 
         if method == "roi_crop":
             pass
-        
+        print('size', processed_image.shape)
         _, buffer = cv2.imencode('.jpg', processed_image)
         
         return send_file(BytesIO(buffer), mimetype='image/jpeg')
