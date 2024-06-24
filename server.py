@@ -131,7 +131,7 @@ def process_image():
         file.save(filepath)
         
         method = request.form['method']
-        if method not in ['gan', 'sd1', 'sd2', 'sr1', 'sr2', 'sod', 'crop', 'blur', 'retarget']:
+        if method not in ['gan', 'sd1', 'sd2', 'sr1', 'sr2', 'sod1', 'sod2', 'crop', 'blur', 'retarget']:
             return jsonify(error='Invalid method'), 400
 
         image = cv2.imread(filepath)
@@ -155,9 +155,14 @@ def process_image():
             model_path = config.sr2_model
             processed_image = sr_overall(image, model_path, 512, False)
         
-        if method == 'sod':
+        if method == 'sod1':
             model_path = config.sod_model
             processed_image = salient_crop(image, model_path)
+            
+        if method == 'sod2':
+            pass
+            # model_path = config.sod_model
+            # processed_image = salient_crop(image, model_path)
         
         if method == 'crop':
             x, y = int(request.form.get('x', 0)), int(request.form.get('y', 0))
