@@ -3,22 +3,24 @@ import os.path as pth
 import time
 import uuid
 import logging
+from logging.handlers import RotatingFileHandler
 import warnings
 import tempfile
 from io import BytesIO
 
+import torch
+import cv2
+# import ailia_tflite
 from PIL import Image
 from flask import Flask, request, jsonify, send_file
 from werkzeug.utils import secure_filename
-from logging.handlers import RotatingFileHandler
-import torch
-import cv2
 
 import config
 from outpainting_gan.outpainting import *
 from outpainting_sd.outpainting import outpaint_sd_overall
 from super_res.sr import sr_overall
 from sod.dfi import build_model
+# from sod.back_removal import recognize_from_image
 
 os.makedirs(config.tempdir, exist_ok=True)
 tempfile.tempdir = config.tempdir
@@ -115,6 +117,10 @@ def salient_crop(image_original, model_path):
         for _, (x, y, w, h) in enumerate(bounding_boxes):
             return image_original[y:y+h, x:x+w] 
         
+# def back_remove(image, model_path):
+#     interpreter = ailia_tflite.Interpreter(model_path=model_path)
+#     return recognize_from_image(image, interpreter)
+
 
 @app.route('/process_image', methods=['POST'])
 def process_image():
@@ -156,13 +162,12 @@ def process_image():
             processed_image = sr_overall(image, model_path, 512, False)
         
         if method == 'sod1':
-            model_path = config.sod_model
+            model_path = config.sod1_model
             processed_image = salient_crop(image, model_path)
             
-        if method == 'sod2':
-            pass
-            # model_path = config.sod_model
-            # processed_image = salient_crop(image, model_path)
+        # if method == 'sod2':
+        #     model_path = config.sod2_model
+        #     processed_image = back_remove(image, model_path)
         
         if method == 'crop':
             x, y = int(request.form.get('x', 0)), int(request.form.get('y', 0))
@@ -179,9 +184,8 @@ def process_image():
 
         if method == 'roi_crop':
             pass
-        print('size', processed_image.shape)
+
         _, buffer = cv2.imencode('.jpg', processed_image)
-        
         return send_file(BytesIO(buffer), mimetype='image/jpeg')
     
     return jsonify(error='Invalid file type'), 400
@@ -191,6 +195,6 @@ if __name__ == '__main__':
     if not pth.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
         
-    hostIP, port = '0.0.0.0', 5005
+    hostIP, port = '0.0.0.0', 5006
     app.run(host=hostIP, port=port, debug=True)
 
