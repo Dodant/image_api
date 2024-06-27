@@ -141,6 +141,6 @@ def overall_prc(image, aimodels, device='cuda:2'):
     with torch.no_grad():
         sr_result = sr_model(cropped_image_tensor).clamp(0, 1)
     sr_image = to_pil(sr_result.squeeze(0).cpu())
-    final_image = sr_image.resize((1080, 1838))
+    final_image = sr_image.resize((1080, 1828))
 
     return cv2.cvtColor(np.array(final_image), cv2.COLOR_BGR2RGB)

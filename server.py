@@ -137,10 +137,11 @@ def process_image():
         file.save(filepath)
         
         method = request.form['method']
-        if method not in ['gan', 'sd1', 'sd2', 'sr1', 'sr2', 'sod1', 'sod2', 'auto', 'crop', 'blur', 'retarget']:
+        if method not in ['original', 'gan', 'sd1', 'sd2', 'sr1', 'sr2', 'sod1', 'sod2', 'auto', 'crop', 'blur', 'retarget']:
             return jsonify(error='Invalid method'), 400
 
         image = cv2.imread(filepath)
+        if method == 'original': processed_image = image
         if method == 'gan':  processed_image = outpaint_image_gan(image, aimodels, 128)
         if method == 'sd1':  processed_image = outpaint_sd_overall(image, aimodels)
         if method == 'sr1':  processed_image = sr_overall(image, aimodels, 128)    
