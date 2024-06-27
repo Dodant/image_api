@@ -1,5 +1,3 @@
-import cv2
-import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -198,26 +196,3 @@ class DFI(nn.Module):
 
 def build_model():
     return DFI(*extra_layer(resnet50_ppm()))
-
-def salient_crop(image_original, model):
-    in_ = np.array(image_original, dtype=np.float32) 
-    in_ -= np.array((104.00699, 116.66877, 122.67892))
-    image, _ = in_.transpose((2,0,1)), tuple(in_.shape[:2])
-    image = torch.Tensor(image).unsqueeze(0)
-    
-    with torch.no_grad():
-        preds = model(image, mode=3)
-        pred_sal = np.squeeze(torch.sigmoid(preds[1][0]).cpu().data.numpy())
-        pred_sal = 255 * pred_sal
-        pred_sal = np.where(pred_sal > 126, 255, 0).astype(np.uint8)
-
-        contours, _ = cv2.findContours(pred_sal, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        bounding_boxes = [cv2.boundingRect(contour) for contour in contours]
-
-        max_sq = 0
-        for idx, (x, y, w, h) in enumerate(bounding_boxes):
-            if max_sq < w*h:
-                max_sq = max(max_sq, w*h)
-                id = idx  
-        x, y, w, h = bounding_boxes[id]
-        return image_original[y:y+h, x:x+w] 

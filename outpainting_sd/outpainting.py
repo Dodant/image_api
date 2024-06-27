@@ -21,6 +21,7 @@ def shrink_and_paste_on_blank(current_image:Image.Image, mask_width:int=64):
 
     return Image.fromarray(blank_image)
 
+
 def shrink_and_add_border_from_original(current_image: Image.Image, mask_width: int=64):
     height, width = current_image.height, current_image.width
 
@@ -32,6 +33,7 @@ def shrink_and_add_border_from_original(current_image: Image.Image, mask_width: 
     result_image_array[mask_width : height - mask_width, mask_width : width - mask_width, :] = shrinked_image_array
     
     return Image.fromarray(result_image_array)
+
 
 def shrink_and_add_blurred_border(current_image: Image.Image, mask_width: int=64):
     height, width = current_image.height, current_image.width
@@ -49,15 +51,12 @@ def shrink_and_add_blurred_border(current_image: Image.Image, mask_width: int=64
 
     return Image.fromarray(result_image_array)
 
-def outpaint_sd_overall(image, model_path):
+
+def outpaint_sd_overall(image, pipe, interrogator):
     NEGATIVE_PROMPT = 'text, bad anatomy, bad proportions, blurry, cropped, deformed, disfigured, duplicate, error, extra limbs, gross proportions, jpeg artifacts, long neck, low quality, lowres, malformed, morbid, mutated, mutilated, out of frame, ugly, worst quality, ((nsfw))'
     
     image_original = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-    safety_checker = StableDiffusionSafetyChecker.from_pretrained(config.sfy_chk_model)
-    pipe =  StableDiffusionInpaintPipeline.from_pretrained(model_path, safety_checker=safety_checker)
-    pipe.to('cuda:3')
-    interrogator = interrogators[config.wd_name]
-    
+
     new_size = (512, 512)
     image_original_ =[image_original.resize(new_size)][0]
     image = shrink_and_add_blurred_border(image_original_)
