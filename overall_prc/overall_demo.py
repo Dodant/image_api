@@ -65,7 +65,7 @@ def overall_prc(image, aimodels, device='cuda:2'):
         height = height // 2
         new_size = (width, height)
     
-    MASK_WIDTH_PERCENTAGE = 0.15  # 5% of the height
+    MASK_WIDTH_PERCENTAGE = 0.15
     MASK_WIDTH = int(height * MASK_WIDTH_PERCENTAGE)
 
     image_original = image_original.resize(new_size)
@@ -77,13 +77,15 @@ def overall_prc(image, aimodels, device='cuda:2'):
 
     result = interrogator.interrogate(image_original)
     tags = Interrogator.postprocess_tags(result[1], threshold=0.75, escape_tag=True, replace_underscore=True)
+    for i in tags: print(f'{i} : {tags[i]}')
 
     while True:
-        output = pipe(prompt=', '.join(tags.keys()), negative_prompt=config.negative_prompt, image=image, mask_image=mask_image, num_inference_steps=20, strength=0.925)
+        output = pipe(prompt=', '.join(tags.keys()), negative_prompt=config.negative_prompt, image=image, mask_image=mask_image, num_inference_steps=20, strength=0.94)
         if not output.nsfw_content_detected[0]:
             output_image = output.images[0]
             break
-
+    output_image = output_image.resize(new_size)
+    
     in_ = np.array(output_image, dtype=np.float32) 
     in_ -= np.array((104.00699, 116.66877, 122.67892))
     in_2, _ = in_.transpose((2,0,1)), tuple(in_.shape[:2])
@@ -117,6 +119,7 @@ def overall_prc(image, aimodels, device='cuda:2'):
 
     if x_point - crop_width//2 < 0: x = 0
     elif x_point + crop_width//2 > width: x = width - crop_width
+    else: x = x_point - crop_width//2
 
     t_width, t_height = image_original.size
     shrinked_image = image_original.resize((t_width - 2 * MASK_WIDTH, t_height - 2 * MASK_WIDTH))
@@ -127,7 +130,7 @@ def overall_prc(image, aimodels, device='cuda:2'):
 
     shrinked_image_np = np.array(shrink_black_image.convert("RGB"))
     mask_image_np = np.array(mask_image)
-    output_image = output_image.resize(new_size)
+    
     output_image_np = np.array(output_image.convert("RGB"))
     center = (output_image_np.shape[1] // 2, output_image_np.shape[0] // 2)
     blended_image = Image.fromarray(poisson_blend(shrinked_image_np, output_image_np, mask_image_np, center))
@@ -138,6 +141,6 @@ def overall_prc(image, aimodels, device='cuda:2'):
     with torch.no_grad():
         sr_result = sr_model(cropped_image_tensor).clamp(0, 1)
     sr_image = to_pil(sr_result.squeeze(0).cpu())
-    final_image = sr_image.resize((1080, 1857))
+    final_image = sr_image.resize((1080, 1838))
 
     return cv2.cvtColor(np.array(final_image), cv2.COLOR_BGR2RGB)
