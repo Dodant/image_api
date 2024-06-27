@@ -12,6 +12,7 @@ import torch
 import cv2
 # import ailia_tflite
 from PIL import Image
+import tensorflow as tf
 from flask import Flask, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 from diffusers import StableDiffusionInpaintPipeline
@@ -19,12 +20,11 @@ from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from basicsr.archs.rrdbnet_arch import RRDBNet
 
 import config
-from outpainting_gan.outpainting import *
+from outpainting_gan.outpainting import outpaint_image_gan
 from outpainting_sd.outpainting import outpaint_sd_overall
 from super_res.sr import sr_overall
 from sod.dfi import build_model, salient_crop
 # from sod.back_removal import recognize_from_image
-from overall_prc.interrogators import interrogators
 from overall_prc.overall_demo import overall_prc
 
 os.makedirs(config.tempdir, exist_ok=True)
@@ -59,7 +59,7 @@ class AiModels():
         # self.pipe2 = StableDiffusionInpaintPipeline.from_pretrained(config.sd2_model, safety_checker=safety_checker)
         self.pipe1.to('cuda:3')
         # self.pipe2.to('cuda:2')
-        self.sd_tagger = interrogators[config.wd_name]
+        self.sd_tagger = config.interrogator
 
         # SR
         self.sr1_model = tf.lite.Interpreter(model_path=config.sr1_model)
@@ -78,6 +78,7 @@ class AiModels():
         self.sr2_1_model.to('cuda:2')
 
 aimodels = AiModels()
+
 
 def log_image_info(file_data):
     try:
@@ -116,13 +117,6 @@ def handle_exception(e):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
-def outpaint_image_gan(image, interpreter, input_size=128):
-    masked_image = resize_masking(image, (input_size, input_size))
-    output_image = predict_image(interpreter, masked_image)
-    output_image = postprocess_image(output_image)
-    _, output_image = outpaint(output_image, image)
-    return (output_image * 255).astype('uint8')
-
 # def back_remove(image, model_path):
 #     interpreter = ailia_tflite.Interpreter(model_path=model_path)
 #     return recognize_from_image(image, interpreter)
@@ -147,11 +141,11 @@ def process_image():
             return jsonify(error='Invalid method'), 400
 
         image = cv2.imread(filepath)
-        if method == 'gan':  processed_image = outpaint_image_gan(image, aimodels.gan_model, 128)
-        if method == 'sd1':  processed_image = outpaint_sd_overall(image, aimodels.pipe1, aimodels.sd_tagger)
-        if method == 'sr1':  processed_image = sr_overall(image, aimodels.sr1_model, 128)    
-        if method == 'sod1': processed_image = salient_crop(image, aimodels.sod_model)
-        if method == 'auto': processed_image = overall_prc(image, aimodels.pipe1, aimodels.sd_tagger, aimodels.sr2_1_model, aimodels.sod_model)
+        if method == 'gan':  processed_image = outpaint_image_gan(image, aimodels, 128)
+        if method == 'sd1':  processed_image = outpaint_sd_overall(image, aimodels)
+        if method == 'sr1':  processed_image = sr_overall(image, aimodels, 128)    
+        if method == 'sod1': processed_image = salient_crop(image, aimodels)
+        if method == 'auto': processed_image = overall_prc(image, aimodels)
         # if method == 'sd2': processed_image = outpaint_sd_overall(image, aimodel.pipe2, aimodels.sd_tagger)
         # if method == 'sr2': processed_image = sr_overall(image,aimodels.sr1_model, 512, False)
         
@@ -171,4 +165,3 @@ if __name__ == '__main__':
     
     hostIP, port = '0.0.0.0', 5006
     app.run(host=hostIP, port=port, debug=True)
-

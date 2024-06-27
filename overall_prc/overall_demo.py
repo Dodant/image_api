@@ -1,24 +1,11 @@
 import cv2
 import numpy as np
-from PIL import Image, ImageFilter, ImageOps
-from diffusers import StableDiffusionInpaintPipeline
-from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 import torch
-from diffusers import StableDiffusionInpaintPipeline
-import requests
-from io import BytesIO
-import PIL
-from typing import Generator
-from pathlib import Path
-import argparse
-import cv2
 import torchvision.transforms as T
+from PIL import Image, ImageFilter
 
 import config
 from .interrogator import Interrogator
-from .interrogators import interrogators
-from sod.dfi import build_model
-from basicsr.archs.rrdbnet_arch import RRDBNet
 
 
 def poisson_blend(source, destination, mask, center):
@@ -65,8 +52,9 @@ def shrink_and_add_blurred_border(current_image: Image.Image, mask_width: int):
 
     return Image.fromarray(result_image_array)
 
-def overall_prc(image, pipe, interrogator, sr_model, sod_model, device='cuda:2'):
+def overall_prc(image, aimodels, device='cuda:2'):
     
+    pipe, interrogator, sr_model, sod_model = aimodels.pipe1, aimodels.sd_tagger, aimodels.sr2_1_model, aimodels.sod_model
     to_tensor, to_pil = T.ToTensor(), T.ToPILImage()
     image_original = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
     width, height = image_original.size

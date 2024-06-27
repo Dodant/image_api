@@ -199,13 +199,14 @@ class DFI(nn.Module):
 def build_model():
     return DFI(*extra_layer(resnet50_ppm()))
 
-def salient_crop(image_original, model):
+def salient_crop(image_original, aimodels):
     in_ = np.array(image_original, dtype=np.float32) 
     in_ -= np.array((104.00699, 116.66877, 122.67892))
     image, _ = in_.transpose((2,0,1)), tuple(in_.shape[:2])
     image = torch.Tensor(image).unsqueeze(0)
     
     with torch.no_grad():
+        model = aimodels.sod_model
         preds = model(image, mode=3)
         pred_sal = np.squeeze(torch.sigmoid(preds[1][0]).cpu().data.numpy())
         pred_sal = 255 * pred_sal

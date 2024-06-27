@@ -1,4 +1,3 @@
-import skimage
 import numpy as np
 import tensorflow as tf
 from skimage import transform
@@ -88,3 +87,11 @@ def outpaint(output_img, input_img):
     blended_img = np.clip(blended_img, 0, 1)
 
     return output_img, blended_img
+
+def outpaint_image_gan(image, aimodels, input_size=128):
+    interpreter = aimodels.gan_model
+    masked_image = resize_masking(image, (input_size, input_size))
+    output_image = predict_image(interpreter, masked_image)
+    output_image = postprocess_image(output_image)
+    _, output_image = outpaint(output_image, image)
+    return (output_image * 255).astype('uint8')

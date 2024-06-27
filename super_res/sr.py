@@ -1,11 +1,9 @@
-from PIL import Image
-
 import cv2
 import numpy as np
-import tensorflow as tf
+from PIL import Image
 
 
-def sr_overall(image, interpreter, resolution=128, tf_=True):
+def sr_overall(image, aimodels, resolution=128, tf_=True):
     new_size = (resolution, resolution)
     init_image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
     init_image_np = np.array(init_image.resize(new_size)).astype(np.float32) / 255.0
@@ -13,6 +11,7 @@ def sr_overall(image, interpreter, resolution=128, tf_=True):
     if not tf_:
         init_image_np = init_image_np.transpose(0, 3, 1, 2)
     
+    interpreter = aimodels.sr1_model
     input_details, output_details = interpreter.get_input_details(), interpreter.get_output_details()
     interpreter.set_tensor(input_details[0]['index'], init_image_np)
     interpreter.invoke()
