@@ -20,10 +20,11 @@ from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 from basicsr.archs.rrdbnet_arch import RRDBNet
 
 import config
-from outpainting_gan.outpainting import outpaint_image_gan
-from outpainting_sd.outpainting import outpaint_sd_overall
-from super_res.sr import sr_overall
-from sod.dfi import build_model, salient_crop
+# from outpainting_gan.outpainting import outpaint_image_gan
+# from outpainting_sd.outpainting import outpaint_sd_overall
+# from super_res.sr import sr_overall
+# from sod.dfi import salient_crop
+from sod.dfi import build_model
 # from sod.back_removal import recognize_from_image
 from overall_prc.overall_demo import overall_prc
 
@@ -50,8 +51,8 @@ class AiModels():
         super().__init__()
         
         # GAN
-        self.gan_model = tf.lite.Interpreter(model_path=config.gan_model)
-        self.gan_model.allocate_tensors()
+        # self.gan_model = tf.lite.Interpreter(model_path=config.gan_model)
+        # self.gan_model.allocate_tensors()
         
         # SD
         safety_checker = StableDiffusionSafetyChecker.from_pretrained(config.sfy_chk_model)
@@ -62,14 +63,15 @@ class AiModels():
         self.sd_tagger = config.interrogator
 
         # SR
-        self.sr1_model = tf.lite.Interpreter(model_path=config.sr1_model)
-        self.sr1_model.allocate_tensors()
+        # self.sr1_model = tf.lite.Interpreter(model_path=config.sr1_model)
+        # self.sr1_model.allocate_tensors()
         
         # SOD
         self.sod_model = build_model()
         self.sod_model.load_state_dict(torch.load(config.sod1_model))
         self.sod_model.eval()
         
+        # TODO Only One SR Model
         # SR2_1
         self.sr2_1_model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=4)
         loadnet = torch.load(config.sr2_1_model, map_location=torch.device('cpu'))
@@ -137,15 +139,16 @@ def process_image():
         file.save(filepath)
         
         method = request.form['method']
-        if method not in ['original', 'gan', 'sd1', 'sd2', 'sr1', 'sr2', 'sod1', 'sod2', 'auto', 'crop', 'blur', 'retarget']:
+        if method not in ['gan', 'sd1', 'sd2', 'sr1', 'sr2', 'sod1', 'sod2', 
+                          'auto', 
+                          'crop', 'blur', 'retarget']:
             return jsonify(error='Invalid method'), 400
 
         image = cv2.imread(filepath)
-        if method == 'original': processed_image = image
-        if method == 'gan':  processed_image = outpaint_image_gan(image, aimodels, 128)
-        if method == 'sd1':  processed_image = outpaint_sd_overall(image, aimodels)
-        if method == 'sr1':  processed_image = sr_overall(image, aimodels, 128)    
-        if method == 'sod1': processed_image = salient_crop(image, aimodels)
+        # if method == 'gan':  processed_image = outpaint_image_gan(image, aimodels, 128)
+        # if method == 'sd1':  processed_image = outpaint_sd_overall(image, aimodels)
+        # if method == 'sr1':  processed_image = sr_overall(image, aimodels, 128)    
+        # if method == 'sod1': processed_image = salient_crop(image, aimodels)
         if method == 'auto': processed_image = overall_prc(image, aimodels)
         # if method == 'sd2': processed_image = outpaint_sd_overall(image, aimodel.pipe2, aimodels.sd_tagger)
         # if method == 'sr2': processed_image = sr_overall(image,aimodels.sr1_model, 512, False)
@@ -166,3 +169,5 @@ if __name__ == '__main__':
     
     hostIP, port = '0.0.0.0', 5006
     app.run(host=hostIP, port=port, debug=True)
+        
+#curl -X POST -F 'image=@./refer/4.png' -F 'method=auto'  http://127.0.0.1:5006/process_image --output result2.jpg

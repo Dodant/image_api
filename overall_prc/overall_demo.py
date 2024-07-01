@@ -15,24 +15,58 @@ def poisson_blend(source, destination, mask, center):
 def shrink_and_paste_on_blank(current_image: Image.Image, mask_width: int):
     height, width = current_image.height, current_image.width
 
-    prev_image = current_image.resize((width - 2 * mask_width, height - 2 * mask_width))  # Fixed the order
+    # Calculate the new size while maintaining the aspect ratio
+    aspect_ratio = width / height
+    new_width = width - 2 * mask_width
+    new_height = height - 2 * mask_width
+    
+    if aspect_ratio > 1:  # Width is greater than height
+        new_height = int(new_width / aspect_ratio)
+    else:  # Height is greater than width
+        new_width = int(new_height * aspect_ratio)
+
+    prev_image = current_image.resize((new_width, new_height), Image.LANCZOS)
     prev_image = np.array(prev_image.convert('RGBA'))
 
-    blank_image = np.array(current_image.convert('RGBA')) * 0
-    blank_image[:, :, 3] = 1
-    blank_image[mask_width:height - mask_width, mask_width:width - mask_width, :] = prev_image
+    blank_image = np.zeros((height, width, 4), dtype=np.uint8)
+    
+    # Calculate the starting points for placing prev_image on blank_image
+    start_y = mask_width + (height - 2 * mask_width - new_height) // 2
+    start_x = mask_width + (width - 2 * mask_width - new_width) // 2
+
+    # Ensure the new image fits exactly within the bounds
+    blank_image[start_y:start_y + new_height, start_x:start_x + new_width, :] = prev_image
 
     return Image.fromarray(blank_image)
 
 def shrink_and_add_border_from_original(current_image: Image.Image, mask_width: int):
     height, width = current_image.height, current_image.width
 
-    shrinked_image = current_image.resize((width - 2 * mask_width, height - 2 * mask_width))  # Fixed the order
+    # Calculate the new size while maintaining the aspect ratio
+    aspect_ratio = width / height
+    new_width = width - 2 * mask_width
+    new_height = height - 2 * mask_width
+    
+    if aspect_ratio > 1:  # Width is greater than height
+        new_height = int(new_width / aspect_ratio)
+    else:  # Height is greater than width
+        new_width = int(new_height * aspect_ratio)
+    
+    # Resize the image while maintaining the aspect ratio
+    shrinked_image = current_image.resize((new_width, new_height), Image.LANCZOS)
     shrinked_image = shrinked_image.convert("RGBA")
     shrinked_image_array = np.array(shrinked_image)
 
+    # Create an array for the final image with a transparent background
     result_image_array = np.array(current_image.convert("RGBA"))
-    result_image_array[mask_width:height - mask_width, mask_width:width - mask_width, :] = shrinked_image_array
+    result_image_array[:, :, 3] = 0  # Make the whole image transparent
+
+    # Calculate the position to paste the shrinked image
+    y_offset = (height - new_height) // 2
+    x_offset = (width - new_width) // 2
+
+    # Paste the shrinked image onto the final image
+    result_image_array[y_offset:y_offset + new_height, x_offset:x_offset + new_width, :] = shrinked_image_array
 
     return Image.fromarray(result_image_array)
 
@@ -51,6 +85,7 @@ def shrink_and_add_blurred_border(current_image: Image.Image, mask_width: int):
     result_image_array[mask_width:height - mask_width, mask_width:width - mask_width, :] = shrinked_image_array
 
     return Image.fromarray(result_image_array)
+
 
 def overall_prc(image, aimodels, device='cuda:2'):
     
