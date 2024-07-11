@@ -70,6 +70,7 @@ class AiModels():
         self.sod_model = build_model()
         self.sod_model.load_state_dict(torch.load(config.sod1_model))
         self.sod_model.eval()
+        self.sod_model.to('cuda:1')
         
         # TODO Only One SR Model
         # SR2_1
