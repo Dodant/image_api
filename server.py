@@ -70,7 +70,6 @@ class AiModels():
         self.sod_model = build_model()
         self.sod_model.load_state_dict(torch.load(config.sod1_model))
         self.sod_model.eval()
-        self.sod_model.to('cuda:1')
         
         # TODO Only One SR Model
         # SR2_1
@@ -168,7 +167,7 @@ if __name__ == '__main__':
     if not pth.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
     
-    hostIP, port = '0.0.0.0', 5006
+    hostIP, port = '0.0.0.0', 5007
     app.run(host=hostIP, port=port, debug=True)
         
 #curl -X POST -F 'image=@./refer/4.png' -F 'method=auto'  http://127.0.0.1:5006/process_image --output result2.jpg
